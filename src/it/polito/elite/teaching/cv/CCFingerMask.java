@@ -255,9 +255,11 @@ public class CCFingerMask {
 		Mat ellM = Mat.zeros(mat2.rows(), mat2.cols(), CvType.CV_8UC1);
 		Imgproc.ellipse(ellM,ellipse2,new Scalar(255,255,255),Core.FILLED);
 		if( di != null )	di.writeMat("ellM",ellM);
-		Mat illMask = new Mat();
-		maskResult.copyTo(illMask,ellM);
-		maskResult = illMask.clone();
+		if( false ) {
+			Mat illMask = new Mat();
+			maskResult.copyTo(illMask,ellM);
+			maskResult = illMask.clone();
+		}
 
 		//Mask used to flood filling.
 		//Notice the size needs to be 2 pixels than the image.

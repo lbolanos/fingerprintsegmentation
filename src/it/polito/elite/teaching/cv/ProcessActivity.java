@@ -52,7 +52,7 @@ public class ProcessActivity {
 
         // apply histogram equalization
         Mat equalized = new Mat(rows, cols, CvType.CV_32FC1);
-        Imgproc.equalizeHist(MatSnapShot, equalized);
+		Imgproc.equalizeHist(MatSnapShot, equalized);
         if( di != null )	di.writeMat2( "equalized",equalized);
 
         // convert to float, very important
