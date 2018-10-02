@@ -1,20 +1,16 @@
 package it.polito.elite.teaching.cv;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
-import org.opencv.core.Range;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.photo.Photo;
 
 import android.util.Log;
 
@@ -23,29 +19,63 @@ public class CCProcess {
 	private static final String TAG = "CCProcess";
 
 
-	public static Mat resize(Mat refMat, Mat ccMat, int mode, IDebugImage di) {		
-		Mat lat = imbinarize(ccMat, di);
-		Mat masked = new Mat();		
-		Mat maskCC = CCFingerMask.maskFingerP(ccMat, mode, null);
-		lat.copyTo(masked, maskCC);
+	public static Mat resize(Mat refMat, Mat lat, Mat maskCC, int mode, IDebugImage di) {
+		Mat masked = new Mat();
+		if( maskCC != null ) {
+			lat.copyTo(masked, maskCC);
+		} else {
+			masked = lat.clone();
+		}
+		
 		if( di != null )	di.writeMat2( "masked",masked);	
 		
 		//trim
 		Mat trim = trim(masked);
 		if( di != null )	di.writeMat2( "trim", trim);
 		
-		double mediaDistanceCC = getMediaDistance(trim);
-		double mediaDistanceRef = getMediaDistance(refMat);
-		double perc = mediaDistanceRef / mediaDistanceCC;
+		double perc = getPercentageSize(refMat, trim, di);
 		
 		int width = (int) (trim.cols() * perc);
 		int height = (int) (trim.rows() * perc);
+
+		
 		Mat resizedFrame = new Mat(width, height, trim.type());
         Imgproc.resize(trim, resizedFrame, new Size(width, height));
         if( di != null )	di.writeMat2( "resize", resizedFrame);
         
+        if( di != null )   getPercentageSize(refMat, resizedFrame, di);
+        
 		return resizedFrame;
 	}
+
+	public static double getPercentageSize(Mat refMat, Mat trim, IDebugImage di) {
+		double mediaDistanceCC = getMediaDistance(trim);
+		double mediaDistanceRef = getMediaDistance(refMat);
+		double perc = mediaDistanceRef / mediaDistanceCC;
+		int width = (int) (trim.cols() * perc);
+		int height = (int) (trim.rows() * perc);
+		if( di != null )	di.log(TAG, "mediaDistanceCC=" +  mediaDistanceCC+
+				" mediaDistanceRef=" +  mediaDistanceRef+
+				" perc=" + perc +
+				" width=" +  width +
+				" height=" + height  );
+		return perc;
+	}
+	
+
+    public static Mat heightCrop(Mat refMat, Mat croppedMat, IDebugImage di) {
+        int width = refMat.cols();
+
+        double widthR = (double)width / (double)croppedMat.width();
+        int height = (int)((double)croppedMat.height() * widthR);
+        if( di != null )	di.log(TAG, " final region width " + width  + " width R" + widthR + " height" + height);
+        Imgproc.resize(croppedMat, croppedMat, new Size((double)width, (double)height));
+        int desiredheight = (int)((double)width * 1.42D < (double)height ? (double)width * 1.42D : (double)height);
+        Rect cropRegion = new Rect(0, 0, width, desiredheight);
+
+        croppedMat = croppedMat.submat(cropRegion);
+        return croppedMat;
+    }
 
 	public static Mat adjusReftMask(Mat resizedFrame, Mat refMask, int position, IDebugImage di ) {
 		int finalWidth = resizedFrame.width();
@@ -88,6 +118,8 @@ public class CCProcess {
         	int bottom = diffHeight * ( 4 - position );
         	int left = 0;
         	int right = 0;
+        	int ypad = finalHeight - currHeight - top - bottom;
+        	bottom += ypad;
         	return makeBorder( temp, top, bottom, left, right, 0, di, "PositiveHeight" + position );        	
         } else {
         	diffHeight = diffHeight / 2;
@@ -101,6 +133,8 @@ public class CCProcess {
         	int bottom = 0;
         	int left = diffHalfWidth;
         	int right = diffHalfWidth;
+        	int xpad = finalWidth - currWidth - left - right;
+        	right += xpad;
         	return makeBorder( temp, top, bottom, left, right, 0, di, "PositiveWidtht" + position );               	
         }
 	}
@@ -125,14 +159,13 @@ public class CCProcess {
 
 	private static double getMediaDistance(Mat mat) {
 		List<Integer> stockList = new ArrayList<Integer>();
-		
-		int center = mat.width() / 2;
-        int height = mat.height();
         int countBlack = 0;
         int countWhite = 0;
         int oldCountWhite = 0;
-        for (int y = 0; y < height; y++) {
-            double[] ds = mat.get(y, center);
+        int hcenter = mat.height() / 2;
+        int width = mat.width();
+        for (int x = 0; x < width; x++) {
+            double[] ds = mat.get(hcenter, x);
 			if(ds[0] > 0) {
 				if( countWhite > 0 && countBlack > 0 && oldCountWhite > 0 ) {
 					stockList.add( countBlack + countWhite / 2 + oldCountWhite + 2 );
@@ -151,17 +184,44 @@ public class CCProcess {
             	countBlack++;
             }
         }
+        /*
+        countBlack = 0;
+        countWhite = 0;
+        oldCountWhite = 0;
+        int wcenter = mat.width() / 2;
+        int height = mat.height();
+        for (int y = 0; y < height; y++) {
+            double[] ds = mat.get(y, wcenter);
+			if(ds[0] > 0) {
+				if( countWhite > 0 && countBlack > 0 && oldCountWhite > 0 ) {
+					stockList.add( countBlack + countWhite / 2 + oldCountWhite + 2 );
+					oldCountWhite = countWhite;
+					countBlack = 0;
+					countWhite = 0;
+            	} else if( countWhite > 0 && countBlack > 0 && oldCountWhite == 0 ) {
+            		countWhite = 0;
+            	}
+				countWhite++;
+            } else {
+            	if( countWhite > 0 && countBlack > 0 && oldCountWhite == 0 ) {
+            		oldCountWhite = countBlack;
+            		countBlack = 0;
+            	}
+            	countBlack++;
+            }
+        }
+*/
 		return medianValue( stockList );
 	}
 
 	private static double medianValue(List<Integer> list) {
-		list.sort(Comparator.naturalOrder());
+		list.sort(null);
 		double median = list.get(list.size()/2);
 		if(list.size()%2 == 0) median = (median + list.get(list.size()/2-1)) / 2;
 		return median;
 	}
 
-	private static Mat imbinarize(Mat ccMat, IDebugImage di) {
+	public static Mat imbinarize(Mat ccMat, IDebugImage di) {
 		Mat inBinarize = ccMat.clone();
 		//ccMat.copyTo(masked, mask);
 		
@@ -180,14 +240,14 @@ public class CCProcess {
 		if( di != null )	di.writeMat2( "gamma",gamma);
 		
 		//-enhance
-		Mat denoise = new Mat();
-		Photo.fastNlMeansDenoising(gamma, denoise);
-		if( di != null )	di.writeMat2( "denoise",denoise);
+		//Mat denoise = new Mat();
+		//Photo.fastNlMeansDenoising(gamma, denoise);
+		//if( di != null )	di.writeMat2( "denoise",denoise);
 		
 		//-equalize
 		// apply histogram equalization
 		Mat equalized = new Mat();
-        Imgproc.equalizeHist(denoise, equalized);
+        Imgproc.equalizeHist(gamma, equalized);
         if( di != null )	di.writeMat2( "equalized",equalized);
 
 		//-negate

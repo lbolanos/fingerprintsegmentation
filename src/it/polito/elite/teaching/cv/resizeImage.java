@@ -45,23 +45,24 @@ public class resizeImage {
 			//buildFingerMask(new File(ORI_FOLDER_ND + "fp_83.jpg"), 2, di);
 			//buildFingerMask(new File(ORI_FOLDER_ND + "fp_12.jpg"), 0, di);
 			//buildFingerMask(new File(ORI_FOLDER_ND + "fp_27.jpg"), 0, di);
-			buildOptimizeRealFP("1", 0, di);
+			buildOptimizeRealFP("14", 1, di);
 		}
 		
 	}
 
-	private static void buildOptimizeRealFP(String name, int i, IDebugImage di) throws IOException {
-		buildOptimizeRealFP(new File(ORI_FOLDER + name + "ref.jpg"),new File(ORI_FOLDER + name + "cc.jpg"), 0, di);		
+	private static void buildOptimizeRealFP(String name, int mode, IDebugImage di) throws IOException {
+		buildOptimizeRealFP(new File(ORI_FOLDER + name + "ref.jpg"),new File(ORI_FOLDER + name + "cc.jpg"), mode, di);		
 	}
 
 	public static void buildOptimizeRealFP( File refF, File ccF, int mode, IDebugImage di ) throws IOException {
 		Mat refMat = getMat(refF);
 		if( di != null )	di.writeMat2( "refMat", refMat);
-		Mat ccMat = getMat(ccF);	
+		Mat ccMat = getMat(ccF);		
+		Mat lat = CCProcess.imbinarize(ccMat, di);		
+		Mat maskCC = CCFingerMask.maskFingerP(ccMat, 0, di);		
+		Mat resizedFrame = CCProcess.resize(refMat, lat, maskCC, 0, di);
 		
-		Mat resizedFrame = CCProcess.resize(refMat, ccMat, mode, di);
-		
-		Mat mask = CCFingerMask.maskFingerP(refMat, mode, null);
+		Mat mask = CCFingerMask.maskFingerP(refMat, 0, null);
 		mask = CCProcess.trim(mask);
 		if( di != null )	di.writeMat2( "maskRef", mask);
         
@@ -70,29 +71,37 @@ public class resizeImage {
         Mat maskCC1 = CCProcess.adjusReftMask( resizedFrame, mask, position++, di );
         resizedFrame.copyTo(finalCC, maskCC1);
         finalCC = CCProcess.trim(finalCC);
+        if( mode == 1) finalCC = CCProcess.heightCrop(refMat,finalCC,di);
         //finalCC = CCProcess.adjusReftMask( refMat, finalCC, 2, di );
 		if( di != null )	di.writeMat2( "finalCC1",finalCC);
+		if( di != null )   CCProcess.getPercentageSize(refMat, finalCC, di);
 		
 		finalCC = new Mat();
         Mat maskCC2 = CCProcess.adjusReftMask( resizedFrame, mask, position++, di );
         resizedFrame.copyTo(finalCC, maskCC2);
         finalCC = CCProcess.trim(finalCC);
+        if( mode == 1) finalCC = CCProcess.heightCrop(refMat,finalCC,di);
         //finalCC = CCProcess.adjusReftMask( refMat, finalCC, 2, di );
 		if( di != null )	di.writeMat2( "finalCC2",finalCC);
+		if( di != null )   CCProcess.getPercentageSize(refMat, finalCC, di);
 		
 		finalCC = new Mat();
         Mat maskCC3 = CCProcess.adjusReftMask( resizedFrame, mask, position++, di );
         resizedFrame.copyTo(finalCC, maskCC3);
         finalCC = CCProcess.trim(finalCC);
+        if( mode == 1) finalCC = CCProcess.heightCrop(refMat,finalCC,di);
         //finalCC = CCProcess.adjusReftMask( refMat, finalCC, 2, di );
 		if( di != null )	di.writeMat2( "finalCC3",finalCC);
+		if( di != null )   CCProcess.getPercentageSize(refMat, finalCC, di);
 		
 		finalCC = new Mat();
         Mat maskCC4 = CCProcess.adjusReftMask( resizedFrame, mask, position++, di );
         resizedFrame.copyTo(finalCC, maskCC4);
         finalCC = CCProcess.trim(finalCC);
+        if( mode == 1) finalCC = CCProcess.heightCrop(refMat,finalCC,di);
         //finalCC = CCProcess.adjusReftMask( refMat, finalCC, 2, di );
 		if( di != null )	di.writeMat2( "finalCC4",finalCC);
+		if( di != null )   CCProcess.getPercentageSize(refMat, finalCC, di);
 		
 	}
 
