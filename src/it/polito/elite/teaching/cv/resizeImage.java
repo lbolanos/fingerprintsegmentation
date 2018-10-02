@@ -15,9 +15,12 @@ public class resizeImage {
 
 	private static final String ORI_FOLDER = "D:\\Download\\temp\\14\\entrada\\";	
 	private static final boolean DEBUG = true;
+	private static NBISWrapper nbisWrapper;
 
-	public static void main(String[] args) throws IOException {
-
+	public static void main(String[] args) throws Exception {
+		AppUtils.deleteGarbageEnrollFiles();
+		nbisWrapper = new NBISWrapper();
+		nbisWrapper.init(StaticConfig.NBIS_PATH);
 		// load the native OpenCV library
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		if( !DEBUG )	{
@@ -45,16 +48,16 @@ public class resizeImage {
 			//buildFingerMask(new File(ORI_FOLDER_ND + "fp_83.jpg"), 2, di);
 			//buildFingerMask(new File(ORI_FOLDER_ND + "fp_12.jpg"), 0, di);
 			//buildFingerMask(new File(ORI_FOLDER_ND + "fp_27.jpg"), 0, di);
-			buildOptimizeRealFP("14", 1, di);
+			buildOptimizeRealFP("14", 0, di);
 		}
 		
 	}
 
-	private static void buildOptimizeRealFP(String name, int mode, IDebugImage di) throws IOException {
+	private static void buildOptimizeRealFP(String name, int mode, IDebugImage di) throws Exception {
 		buildOptimizeRealFP(new File(ORI_FOLDER + name + "ref.jpg"),new File(ORI_FOLDER + name + "cc.jpg"), mode, di);		
 	}
 
-	public static void buildOptimizeRealFP( File refF, File ccF, int mode, IDebugImage di ) throws IOException {
+	public static void buildOptimizeRealFP( File refF, File ccF, int mode, IDebugImage di ) throws Exception {
 		Mat refMat = getMat(refF);
 		if( di != null )	di.writeMat2( "refMat", refMat);
 		Mat ccMat = getMat(ccF);		
@@ -75,6 +78,7 @@ public class resizeImage {
         //finalCC = CCProcess.adjusReftMask( refMat, finalCC, 2, di );
 		if( di != null )	di.writeMat2( "finalCC1",finalCC);
 		if( di != null )   CCProcess.getPercentageSize(refMat, finalCC, di);
+		nbisWrapper.obtainScore(refF,finalCC, "finalCC1");
 		
 		finalCC = new Mat();
         Mat maskCC2 = CCProcess.adjusReftMask( resizedFrame, mask, position++, di );
@@ -101,8 +105,7 @@ public class resizeImage {
         if( mode == 1) finalCC = CCProcess.heightCrop(refMat,finalCC,di);
         //finalCC = CCProcess.adjusReftMask( refMat, finalCC, 2, di );
 		if( di != null )	di.writeMat2( "finalCC4",finalCC);
-		if( di != null )   CCProcess.getPercentageSize(refMat, finalCC, di);
-		
+		if( di != null )   CCProcess.getPercentageSize(refMat, finalCC, di);		
 	}
 
 	private static Mat getMat(File refF) throws IOException {

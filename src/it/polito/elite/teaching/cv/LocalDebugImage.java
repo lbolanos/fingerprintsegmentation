@@ -11,9 +11,7 @@ import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
 public class LocalDebugImage implements IDebugImage {
-	//private static final String DEST_FOLDER = "C:\\WORK\\wamp\\www\\cloudtimeroot\\trunk\\FalconMobile\\FalconIdenty\\app\\src\\main\\assets\\test\\out\\";
-	private static final String DEST_FOLDER = "D:\\Download\\temp\\14\\out\\";
-	private static final boolean BMP = false;
+	
 
 	@Override
 	public void writeMat2(String filename, Mat mat1) {
@@ -24,6 +22,10 @@ public class LocalDebugImage implements IDebugImage {
 
 	@Override
 	public void writeMat(String fileName, Mat mat) {
+		s_writeMat(fileName, mat, !StaticConfig.BMP);
+	}
+
+	public static void s_writeMat(String fileName, Mat mat, boolean jpeg ) {
 		Mat mat1 = mat.clone();
 		if (mat1.channels() != 1) {				
 			Imgproc.cvtColor(mat1, mat1, Imgproc.COLOR_RGB2GRAY);
@@ -37,10 +39,10 @@ public class LocalDebugImage implements IDebugImage {
 		image1.getRaster().setDataElements(0, 0, mat1.cols(), mat1.rows(), data1);
 
 		String jpg = "jpg";
-		if( BMP ) {
+		if( StaticConfig.BMP && !jpeg ) {
 			jpg = "bmp";
 		}
-		File ouptut = new File(DEST_FOLDER + fileName + "." + jpg);
+		File ouptut = new File( StaticConfig.DEST_FOLDER + fileName + "." + jpg);
 		try {
 			ImageIO.write(image1, jpg, ouptut);
 		} catch (IOException e) {
